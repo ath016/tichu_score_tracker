@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>tichu</title>
+	<style type="text/css">
+		*{
+			margin: 0;
+			padding: 0;
+		}
+		
+		body{
+			box-sizing: border-box;
+			width: 320px;
+			padding:5px;
+			margin: auto;
+			background-color: #272640;
+			
+			font: normal 16px Arial, Helvetica, sans-serif;
+			line-height: 1.5em;
+		}
+		
+		body h1{
+			box-sizing: border-box;
+			width:100%;
+			padding:5px;
+			
+			border: 1px solid #D9C1C5;
+			background-color: #73305B;
+			
+			font: normal 24px Arial, Helvetica, sans-serif;
+			color: #D9C1C5;
+			font-weight: bold;
+			text-align: center;
+		}
+		
+		.totalScore p, .runScore p{
+			font-size: 44px;
+			line-height: 1.2em;
+			color: #D9C1C5;
+		}
+		
+		input[type=range] {
+			-webkit-appearance: none;
+			margin: 18px 0;
+			width: 100%;
+		}
+		
+		input[type=range]:focus {
+			outline: none;
+		}
+		
+		input[type=range]::-webkit-slider-runnable-track {
+			width: 100%;
+			height: 8.4px;
+			background: #A6587C;
+			border: 1px solid #D9C1C5;
+		}
+		input[type=range]::-webkit-slider-thumb {
+			height: 36px;
+			width: 36px;
+			border-radius: 18px;
+			background: #D9C1C5;
+			-webkit-appearance: none;
+			margin-top: -14px;
+		}
+		
+		#t1Tichu, #t2Tichu{
+			width:50%;
+		}
+		
+		.input button{
+			width: 33.33%;
+			padding: 5px;
+			border: 1px solid #D9C1C5;
+			background-color: #73305B;
+			
+			font: normal 20px Arial, Helvetica, sans-serif;
+			color: #D9C1C5;
+			font-weight: bold;
+		}
+		
+		.input button:focus {
+			outline: none;
+		}
+	</style>
+</head>
+<body>
+	<h1>Total Score</h1>
+	<div class="totalScore">
+		<p type="text" id="t1TotalScore">Team 1: 0</p>
+		<p type="text" id="t2TotalScore">Team 2: 0</p>
+	</div>
+	
+	<h1>Running Score</h1>
+	<div class="runScore">
+		<p type="text" id="t1RunScore">Team 1: 0</p>
+		<p type="text" id="t2RunScore">Team 2: 0</p>
+	</div>
+	<h1>Base Score</h1>
+	<div class="input">
+		<input type="range" min="-6" max="26" value="10" id="baseScore">
+	</div>
+	<h1>Tichu Call</h1>
+	<div class="input">
+		<input type="range" min="-2" max="2" value="0" id="t1Tichu"><input type="range" min="-2" max="2" value="0" id="t2Tichu">
+	</div>
+	
+	<div class="input">
+		<button id="commit" onclick='handleCommit()'>Commit</button><button id="undo" onclick='handleUndo()'>Undo</button><button id="redo" onclick='handleRedo()'>Redo</button>
+	</div>
+	
+	<script>
+		let t1TotalScore = document.getElementById('t1TotalScore');
+		let t2TotalScore = document.getElementById('t2TotalScore');
+		let t1RunScore = document.getElementById('t1RunScore');
+		let t2RunScore = document.getElementById('t2RunScore');
+		
+		let baseScore = document.getElementById('baseScore');
+		let t1Tichu = document.getElementById('t1Tichu');
+		let t2Tichu = document.getElementById('t2Tichu');
+		
+		const history = [];
+		let historyPt = -1;
+		let t1Score = 0;
+		let t2Score = 0;
+		
+		baseScore.addEventListener('input', update, false);
+		t1Tichu.addEventListener('input', update, false);
+		t2Tichu.addEventListener('input', update, false);
+		
+		function update() {
+			t1Score = baseScore.value * 5;
+			t2Score = 100 - baseScore.value * 5;
+			
+			if(baseScore.value == -6) {
+				t1Score = 0;
+				t2Score = 200;
+			} // end of if
+			
+			if(baseScore.value == 26) {
+				t1Score = 200;
+				t2Score = 0;
+			} // end of if
+			
+			t1Score += t1Tichu.value * 100;
+			t2Score += t2Tichu.value * 100;
+			
+			t1RunScore.innerHTML = 'Team 1: ' + t1Score;
+			t2RunScore.innerHTML = 'Team 2: ' + t2Score;
+		} // end of update
+		
+		function updateTotal() {
+			const t1Total = history
+				.filter((value, index) => (index <= historyPt))
+				.map(score => score.t1)
+				.reduce((a,b) => a + b, 0);
+			
+			const t2Total = history
+				.filter((value, index) => (index <= historyPt))
+				.map(score => score.t2)
+				.reduce((a,b) => a + b, 0);
+			
+			t1TotalScore.innerHTML = 'Team 1: ' + t1Total;
+			t2TotalScore.innerHTML = 'Team 2: ' + t2Total;
+			
+			// reset board
+			baseScore.value = 10;
+			t1Tichu.value = 0;
+			t2Tichu.value = 0;
+			update();
+		} // end of update total
+		
+		function handleCommit() {
+			// update pointer
+			historyPt++;
+			
+			// clear future
+			history.splice(historyPt, history.length - historyPt);
+			
+			// push new future
+			history.push({t1:t1Score, t2:t2Score})
+			
+			// update total
+			updateTotal();
+		} // end of commit
+		
+		function handleUndo() {
+			// update pointer
+			if(0 <= historyPt) {
+				historyPt--;
+			} // end of if
+			
+			// update total
+			updateTotal();
+		} // end of undo
+		
+		function handleRedo() {
+			// update pointer
+			if(historyPt < history.length - 1) {
+				historyPt++;
+			} // end of if
+			
+			// update total
+			updateTotal();
+		} // end of redo
+		
+		// on start up
+		update();
+	</script>
+</body>
+</html>
